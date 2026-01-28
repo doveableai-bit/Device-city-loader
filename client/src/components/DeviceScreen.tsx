@@ -77,19 +77,17 @@ export function DeviceScreen({
   useEffect(() => {
     if (!isAutoClicking) return;
 
-    // Click after 3 seconds of refresh (_key change)
-    const timeout = setTimeout(() => {
-      const x = Math.random() * 60 + 20; // 20% to 80% to avoid edges
-      const y = Math.random() * 60 + 20;
+    // PROFICIENT AUTO CLICKER: Random intervals to simulate human behavior
+    // Randomized click sequence to handle different ad layouts
+    const triggerClick = () => {
+      const x = Math.random() * 70 + 15; // 15% to 85% range
+      const y = Math.random() * 70 + 15;
       
       setClickPos({ x, y });
       
-      // We can't click INSIDE a cross-origin iframe, but we can trigger 
-      // a series of events on the iframe element itself.
       if (iframeRef.current) {
         try {
           iframeRef.current.focus();
-          
           const rect = iframeRef.current.getBoundingClientRect();
           const clientX = rect.left + (x / 100) * (iframeRef.current.offsetWidth || 300);
           const clientY = rect.top + (y / 100) * (iframeRef.current.offsetHeight || 400);
@@ -100,31 +98,53 @@ export function DeviceScreen({
             cancelable: true,
             clientX,
             clientY,
-            composed: true
+            composed: true,
+            buttons: 1
           };
 
-          // Sequence: mousedown -> mouseup -> click
-          iframeRef.current.dispatchEvent(new MouseEvent('mousedown', commonProps));
+          // Sequence: mousemove -> mousedown -> mouseup -> click
+          iframeRef.current.dispatchEvent(new MouseEvent('mousemove', commonProps));
           
           setTimeout(() => {
             if (iframeRef.current) {
-              iframeRef.current.dispatchEvent(new MouseEvent('mouseup', commonProps));
-              iframeRef.current.dispatchEvent(new MouseEvent('click', commonProps));
-              
-              // Trigger a focus event as well
-              iframeRef.current.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+              iframeRef.current.dispatchEvent(new MouseEvent('mousedown', commonProps));
+              setTimeout(() => {
+                if (iframeRef.current) {
+                  iframeRef.current.dispatchEvent(new MouseEvent('mouseup', commonProps));
+                  iframeRef.current.dispatchEvent(new MouseEvent('click', commonProps));
+                  // Multiple clicks for stubborn ads
+                  if (Math.random() > 0.5) {
+                    iframeRef.current.dispatchEvent(new MouseEvent('click', commonProps));
+                  }
+                  iframeRef.current.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+                }
+              }, 30 + Math.random() * 50); // Human-like hold duration
             }
-          }, 50);
+          }, 100);
         } catch (e) {
           console.error("Click simulation failed:", e);
         }
       }
 
-      // Hide ripple after animation
-      setTimeout(() => setClickPos(null), 1000);
-    }, 3000);
+      // Hide ripple
+      setTimeout(() => setClickPos(null), 800);
+    };
 
-    return () => clearTimeout(timeout);
+    // Initial click after load
+    const initialDelay = 2000 + Math.random() * 3000;
+    const timeout = setTimeout(triggerClick, initialDelay);
+
+    // Periodic clicks while enabled
+    const interval = setInterval(() => {
+      if (Math.random() > 0.4) { // 60% chance to click every interval
+        triggerClick();
+      }
+    }, 8000 + Math.random() * 7000); // Random interval between 8-15s
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, [isAutoClicking, screen._key, screen.id]);
 
   const DeviceIcon = {
