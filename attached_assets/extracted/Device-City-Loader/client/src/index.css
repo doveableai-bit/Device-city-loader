@@ -45,20 +45,6 @@
   --color-ring: hsl(224 76% 48%);
   
   --radius: 0.75rem;
-
-  --color-chart-1: hsl(217 91% 60%);
-  --color-chart-2: hsl(262 83% 58%);
-  --color-chart-3: hsl(224 76% 48%);
-  --color-chart-4: hsl(217 32% 17%);
-  --color-chart-5: hsl(215 20% 65%);
-  --color-sidebar: hsl(222 47% 11%);
-  --color-sidebar-foreground: hsl(210 40% 98%);
-  --color-sidebar-primary: hsl(217 91% 60%);
-  --color-sidebar-primary-foreground: hsl(222 47% 11%);
-  --color-sidebar-accent: hsl(217 32% 17%);
-  --color-sidebar-accent-foreground: hsl(210 40% 98%);
-  --color-sidebar-border: hsl(217 32% 17%);
-  --color-sidebar-ring: hsl(224 76% 48%);
 }
 
 @layer base {

@@ -40,5 +40,4 @@ args = "npm run dev:client"
 waitForPort = 5000
 
 [agent]
-stack = "MOCKUP_JS"
 mockupState = "MOCKUP"
