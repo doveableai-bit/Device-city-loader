@@ -59,8 +59,12 @@ export function DeviceScreen({
         
         // Simulation of ad redirection
         if (screen.url) {
+          // PROFICIENT REDIRECT: Add a random parameter to the URL to force different ads per panel
+          const separator = screen.url.includes('?') ? '&' : '?';
+          const randomizedAdUrl = `${screen.url}${separator}sim_id=${screen.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          
           // Open the ad in the internal "panel tab"
-          setAdUrl(screen.url);
+          setAdUrl(randomizedAdUrl);
           setActiveTab('ad');
           
           // Stay in ad for random duration (5-10s if autopilot off, or per ad length)
