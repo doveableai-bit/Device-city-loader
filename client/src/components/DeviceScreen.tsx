@@ -192,22 +192,24 @@ export function DeviceScreen({
           {activeTab === 'main' ? (
             screen.url ? (
               <iframe
-                ref={iframeRef}
-                key={`${screen.id}-${screen._key}`}
-                src={screen.url}
-                className="w-full h-full border-0"
-                sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              />
+              ref={iframeRef}
+              key={`${screen.id}-${screen._key}`}
+              src={screen.url}
+              className="w-full h-full border-0"
+              sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; attribution-reporting; run-ad-auction; join-ad-interest-group"
+              referrerPolicy="no-referrer"
+            />
             ) : screen.htmlContent ? (
-              <iframe
-                ref={iframeRef}
-                key={`${screen.id}-${screen._key}`}
-                srcDoc={screen.htmlContent}
-                className="w-full h-full border-0"
-                sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              />
+            <iframe
+              ref={iframeRef}
+              key={`${screen.id}-${screen._key}`}
+              srcDoc={screen.htmlContent}
+              className="w-full h-full border-0"
+              sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; attribution-reporting; run-ad-auction; join-ad-interest-group"
+              referrerPolicy="no-referrer"
+            />
             ) : (
               <div className="flex flex-col items-center justify-center text-muted-foreground/30 p-8 text-center h-full">
                 <DeviceIcon className="w-16 h-16 mb-4 opacity-20" />
@@ -224,7 +226,8 @@ export function DeviceScreen({
               src={adUrl!}
               className="w-full h-full border-0"
               sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; attribution-reporting; run-ad-auction; join-ad-interest-group"
+              referrerPolicy="no-referrer"
             />
           )}
         </div>
