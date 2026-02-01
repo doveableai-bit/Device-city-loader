@@ -85,6 +85,7 @@ export default function Dashboard() {
                 onToggleMute={toggleMute}
                 isAutoClicking={isAutoClicking}
                 isAutoSliding={isAutoSliding}
+                isAutoRefreshing={isAutoRefreshing}
               />
             </motion.div>
           ))}

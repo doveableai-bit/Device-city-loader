@@ -23,6 +23,7 @@ interface DeviceScreenProps {
   onToggleMute: (id: number) => void;
   isAutoClicking?: boolean;
   isAutoSliding?: boolean;
+  isAutoRefreshing?: boolean;
 }
 
 export function DeviceScreen({ 
@@ -30,13 +31,63 @@ export function DeviceScreen({
   onRefresh, 
   onToggleMute,
   isAutoClicking,
-  isAutoSliding
+  isAutoSliding,
+  isAutoRefreshing
 }: DeviceScreenProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [clickPos, setClickPos] = useState<{ x: number, y: number } | null>(null);
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [activeTab, setActiveTab] = useState<'main' | 'ad'>('main');
+  const [adUrl, setAdUrl] = useState<string | null>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Auto-Clicker Logic (Enhanced for Redirect/Tab Simulation)
+  useEffect(() => {
+    if (!isAutoClicking) return;
+
+    const handleAdFlow = () => {
+      // 1. Detect and simulate click on "New Tab" button area (ExternalLink/Ad Button)
+      // Since we can't truly "detect" buttons inside cross-origin iframes, 
+      // we target likely ad interaction areas or the manual external link button
+      const triggerClick = () => {
+        // Target coordinates for common ad button locations
+        const x = 50 + (Math.random() * 20 - 10); 
+        const y = 50 + (Math.random() * 20 - 10);
+        
+        setClickPos({ x, y });
+        
+        // Simulation of ad redirection
+        if (screen.url) {
+          // Open the ad in the internal "panel tab"
+          setAdUrl(screen.url);
+          setActiveTab('ad');
+          
+          // Stay in ad for random duration (5-10s if autopilot off, or per ad length)
+          const adDuration = (isAutoRefreshing ? 5000 : 8000) + Math.random() * 5000;
+          
+          setTimeout(() => {
+            setActiveTab('main');
+            setAdUrl(null);
+            
+            // If autopilot is on, the main simulator will handle the next refresh
+            // If autopilot is off, we might want to refresh manually after completing
+            if (!isAutoRefreshing) {
+              onRefresh(screen.id);
+            }
+          }, adDuration);
+        }
+      };
+
+      // Initial delay after load: 5 to 10 seconds
+      const initialDelay = 5000 + Math.random() * 5000;
+      const timeout = setTimeout(triggerClick, initialDelay);
+      return timeout;
+    };
+
+    const timeout = handleAdFlow();
+    return () => clearTimeout(timeout);
+  }, [isAutoClicking, screen._key, screen.id, isAutoRefreshing, screen.url]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -73,80 +124,6 @@ export function DeviceScreen({
     return () => clearInterval(interval);
   }, [isAutoSliding]);
 
-  // Auto-Clicker Logic
-  useEffect(() => {
-    if (!isAutoClicking) return;
-
-    // PROFICIENT AUTO CLICKER: Random intervals to simulate human behavior
-    // Randomized click sequence to handle different ad layouts
-    const triggerClick = () => {
-      const x = Math.random() * 70 + 15; // 15% to 85% range
-      const y = Math.random() * 70 + 15;
-      
-      setClickPos({ x, y });
-      
-      if (iframeRef.current) {
-        try {
-          iframeRef.current.focus();
-          const rect = iframeRef.current.getBoundingClientRect();
-          const clientX = rect.left + (x / 100) * (iframeRef.current.offsetWidth || 300);
-          const clientY = rect.top + (y / 100) * (iframeRef.current.offsetHeight || 400);
-
-          const commonProps = {
-            view: window,
-            bubbles: true,
-            cancelable: true,
-            clientX,
-            clientY,
-            composed: true,
-            buttons: 1
-          };
-
-          // Sequence: mousemove -> mousedown -> mouseup -> click
-          iframeRef.current.dispatchEvent(new MouseEvent('mousemove', commonProps));
-          
-          setTimeout(() => {
-            if (iframeRef.current) {
-              iframeRef.current.dispatchEvent(new MouseEvent('mousedown', commonProps));
-              setTimeout(() => {
-                if (iframeRef.current) {
-                  iframeRef.current.dispatchEvent(new MouseEvent('mouseup', commonProps));
-                  iframeRef.current.dispatchEvent(new MouseEvent('click', commonProps));
-                  // Multiple clicks for stubborn ads
-                  if (Math.random() > 0.5) {
-                    iframeRef.current.dispatchEvent(new MouseEvent('click', commonProps));
-                  }
-                  iframeRef.current.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
-                }
-              }, 30 + Math.random() * 50); // Human-like hold duration
-            }
-          }, 100);
-        } catch (e) {
-          console.error("Click simulation failed:", e);
-        }
-      }
-
-      // Hide ripple
-      setTimeout(() => setClickPos(null), 800);
-    };
-
-    // Initial click after load
-    const initialDelay = 2000 + Math.random() * 3000;
-    const timeout = setTimeout(triggerClick, initialDelay);
-
-    // Periodic clicks while enabled
-    const interval = setInterval(() => {
-      if (Math.random() > 0.4) { // 60% chance to click every interval
-        triggerClick();
-      }
-    }, 8000 + Math.random() * 7000); // Random interval between 8-15s
-
-    return () => {
-      clearTimeout(timeout);
-      clearInterval(interval);
-    };
-  }, [isAutoClicking, screen._key, screen.id]);
-
   const DeviceIcon = {
     'Mobile': Smartphone,
     'Tablet': Tablet,
@@ -161,7 +138,31 @@ export function DeviceScreen({
       "group relative overflow-hidden flex flex-col transition-all duration-300 border-border/50 hover:border-primary/50 hover:shadow-2xl animate-screen-enter bg-card",
       isFullscreen ? "fixed inset-0 z-50 rounded-none border-none" : "h-[400px]"
     )} data-testid={`card-screen-${screen.id}`}>
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-3 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm transition-transform duration-300 group-hover:translate-y-0 -translate-y-full">
+      {/* Tabs Header inside the panel */}
+      <div className="flex bg-black/40 border-b border-white/5 p-1 gap-1">
+        <button 
+          onClick={() => setActiveTab('main')}
+          className={cn(
+            "text-[10px] px-2 py-0.5 rounded transition-colors uppercase tracking-widest font-bold",
+            activeTab === 'main' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5"
+          )}
+        >
+          Main Node
+        </button>
+        {adUrl && (
+          <button 
+            className={cn(
+              "text-[10px] px-2 py-0.5 rounded transition-colors uppercase tracking-widest font-bold flex items-center gap-1",
+              activeTab === 'ad' ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-white/5"
+            )}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Active Ad
+          </button>
+        )}
+      </div>
+
+      <div className="absolute top-10 left-0 right-0 z-20 flex items-center justify-between p-3 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm transition-transform duration-300 group-hover:translate-y-0 -translate-y-full">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-black/40 border-white/10 text-white backdrop-blur-md">
             <MapPin className="w-3 h-3 mr-1 text-accent" />
@@ -188,34 +189,43 @@ export function DeviceScreen({
           className="w-full h-full transition-transform duration-500 ease-in-out"
           style={{ transform: `translateY(-${scrollOffset}px)` }}
         >
-          {screen.url ? (
-            <iframe
-              ref={iframeRef}
-              key={`${screen.id}-${screen._key}`}
-              src={screen.url}
-              className="w-full h-full border-0"
-              sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            />
-          ) : screen.htmlContent ? (
-            <iframe
-              ref={iframeRef}
-              key={`${screen.id}-${screen._key}`}
-              srcDoc={screen.htmlContent}
-              className="w-full h-full border-0"
-              sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-muted-foreground/30 p-8 text-center h-full">
-              <DeviceIcon className="w-16 h-16 mb-4 opacity-20" />
-              <p className="text-sm font-medium uppercase tracking-widest">
-                Awaiting Signal
-              </p>
-              <div className="mt-2 text-xs font-mono opacity-50">
-                {screen.userAgent.substring(0, 40)}...
+          {activeTab === 'main' ? (
+            screen.url ? (
+              <iframe
+                ref={iframeRef}
+                key={`${screen.id}-${screen._key}`}
+                src={screen.url}
+                className="w-full h-full border-0"
+                sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+            ) : screen.htmlContent ? (
+              <iframe
+                ref={iframeRef}
+                key={`${screen.id}-${screen._key}`}
+                srcDoc={screen.htmlContent}
+                className="w-full h-full border-0"
+                sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-muted-foreground/30 p-8 text-center h-full">
+                <DeviceIcon className="w-16 h-16 mb-4 opacity-20" />
+                <p className="text-sm font-medium uppercase tracking-widest">
+                  Awaiting Signal
+                </p>
+                <div className="mt-2 text-xs font-mono opacity-50">
+                  {screen.userAgent.substring(0, 40)}...
+                </div>
               </div>
-            </div>
+            )
+          ) : (
+            <iframe
+              src={adUrl!}
+              className="w-full h-full border-0"
+              sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
           )}
         </div>
 
