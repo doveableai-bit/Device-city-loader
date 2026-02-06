@@ -56,6 +56,7 @@ export function AdSurfer() {
   const errorCheckRef = useRef<NodeJS.Timeout | null>(null);
   const reopenCheckRef = useRef<NodeJS.Timeout | null>(null);
   const surfingRef = useRef(false);
+  const wakeLockRef = useRef<any>(null);
 
   const sendLog = async (level: "INFO" | "WARN" | "ERROR", message: string, meta?: any) => {
     try {
@@ -123,6 +124,36 @@ export function AdSurfer() {
     setIsSurfing(true);
     surfingRef.current = true;
     setCurrentLinkIndex(0);
+    
+    // Request screen wake lock to prevent laptop screen from turning off
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLockRef.current = await (navigator.wakeLock as any).request('screen');
+          console.log('Screen wake lock acquired');
+          void sendLog("INFO", "Screen wake lock activated");
+          
+          // Re-acquire wake lock if user switches tabs (optional)
+          const handleVisibilityChange = async () => {
+            if (surfingRef.current && wakeLockRef.current === null) {
+              try {
+                wakeLockRef.current = await (navigator.wakeLock as any).request('screen');
+              } catch (err) {
+                console.log('Failed to re-acquire wake lock:', err);
+              }
+            }
+          };
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+        } else {
+          console.log('Wake Lock API not supported on this browser');
+        }
+      } catch (err) {
+        console.error('Failed to request wake lock:', err);
+        void sendLog("WARN", "Wake lock request failed", { error: String(err) });
+      }
+    };
+    
+    await requestWakeLock();
     
     // Open a window synchronously on user click to avoid popup blocking
     if (!linkWindowRef.current || linkWindowRef.current.closed) {
@@ -309,7 +340,7 @@ export function AdSurfer() {
     }, 1000);
   };
 
-  const stopSurfing = () => {
+  const stopSurfing = async () => {
     setIsSurfing(false);
     surfingRef.current = false;
     void sendLog("INFO", "Surfing stopped");
@@ -320,6 +351,18 @@ export function AdSurfer() {
     if (reopenCheckRef.current) clearInterval(reopenCheckRef.current);
     if (linkWindowRef.current && !linkWindowRef.current.closed) {
       linkWindowRef.current.close();
+    }
+
+    // Release screen wake lock
+    try {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+        console.log('Screen wake lock released');
+        void sendLog("INFO", "Screen wake lock released");
+      }
+    } catch (err) {
+      console.error('Failed to release wake lock:', err);
     }
 
     linkWindowRef.current = null;
